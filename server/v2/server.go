@@ -1,11 +1,9 @@
 package server
 
 import (
-	"compress/gzip"
-	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -15,17 +13,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NYTimes/gziphandler"
 	"github.com/gocs/cloud-torrent/engine"
-	"github.com/gocs/cloud-torrent/static"
-	"github.com/jpillora/cookieauth"
-	"github.com/jpillora/requestlog"
+	ctstatic "github.com/gocs/cloud-torrent/static/v2"
+	"github.com/gocs/cloud-torrent/web"
 	"github.com/jpillora/scraper/scraper"
 	"github.com/jpillora/velox"
-	"github.com/skratchdot/open-golang/open"
 )
 
-//Server is the "State" portion of the diagram
 type Server struct {
 	//config
 	Title      string `help:"Title of this instance" env:"TITLE"`
@@ -38,34 +32,40 @@ type Server struct {
 	Log        bool   `help:"Enable request logging"`
 	Open       bool   `help:"Open now with your default browser"`
 	//http handlers
-	files, static http.Handler
-	scraper       *scraper.Handler
-	scraperh      http.Handler
+	static   http.Handler
+	scraper  *scraper.Handler
+	scraperh http.Handler
 	//torrent engine
 	engine *engine.Engine
-	state  struct {
-		velox.State
-		sync.Mutex
-		Config          engine.Config
-		SearchProviders scraper.Config
-		Downloads       *fsNode
-		Torrents        map[string]*engine.Torrent
-		Users           map[string]string
-		Stats           struct {
-			Title   string
-			Version string
-			Runtime string
-			Uptime  time.Time
-			System  stats
-		}
+	state  State
+}
+
+type State struct {
+	velox.State
+	sync.Mutex
+	Config          engine.Config
+	SearchProviders scraper.Config
+	Downloads       *fsNode
+	Torrents        map[string]*engine.Torrent
+	Users           map[string]string
+	Stats           struct {
+		Title   string
+		Version string
+		Runtime string
+		Uptime  time.Time
+		System  stats
 	}
 }
+
+var (
+	ErrRequiredKeyCert = errors.New("you must provide both key and cert paths")
+)
 
 // Run the server
 func (s *Server) Run(version string) error {
 	isTLS := s.CertPath != "" || s.KeyPath != "" //poor man's XOR
 	if isTLS && (s.CertPath == "" || s.KeyPath == "") {
-		return fmt.Errorf("You must provide both key and cert paths")
+		return ErrRequiredKeyCert
 	}
 	s.state.Stats.Title = s.Title
 	s.state.Stats.Version = version
@@ -75,8 +75,9 @@ func (s *Server) Run(version string) error {
 	//init maps
 	s.state.Users = map[string]string{}
 	//will use a the local embed/ dir if it exists, otherwise will use the hardcoded embedded binaries
-	s.files = http.HandlerFunc(s.serveFiles)
-	s.static = ctstatic.FileSystemHandler()
+	static := ctstatic.FileSystemHandler()
+
+	s.static = static
 	s.scraper = &scraper.Handler{
 		Log: false, Debug: false,
 		Headers: map[string]string{
@@ -85,7 +86,7 @@ func (s *Server) Run(version string) error {
 		},
 	}
 	if err := s.scraper.LoadConfig(defaultSearchConfig); err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("load config error: %w", err)
 	}
 	//scraper
 	s.state.SearchProviders = s.scraper.Config //share scraper config
@@ -100,12 +101,12 @@ func (s *Server) Run(version string) error {
 		AutoStart:         true,
 	}
 	if _, err := os.Stat(s.ConfigPath); err == nil {
-		if b, err := ioutil.ReadFile(s.ConfigPath); err != nil {
-			return fmt.Errorf("Read configuration error: %s", err)
+		if b, err := os.ReadFile(s.ConfigPath); err != nil {
+			return fmt.Errorf("read configuration error: %w", err)
 		} else if len(b) == 0 {
 			//ignore empty file
 		} else if err := json.Unmarshal(b, &c); err != nil {
-			return fmt.Errorf("Malformed configuration: %s", err)
+			return fmt.Errorf("malformed configuration: %w", err)
 		}
 	}
 	if c.IncomingPort <= 0 || c.IncomingPort >= 65535 {
@@ -134,33 +135,11 @@ func (s *Server) Run(version string) error {
 		}
 	}()
 
-	host := s.Host
-	if host == "" {
-		host = "0.0.0.0"
+	configs := []web.WebConfig{
+		web.WithHost(s.Host),
+		web.WithPort(s.Port),
 	}
-	addr := fmt.Sprintf("%s:%d", host, s.Port)
-	proto := "http"
-	if isTLS {
-		proto += "s"
-	}
-	if s.Open {
-		openhost := host
-		if openhost == "0.0.0.0" {
-			openhost = "localhost"
-		}
-		go func() {
-			time.Sleep(1 * time.Second)
-			open.Run(fmt.Sprintf("%s://%s:%d", proto, openhost, s.Port))
-		}()
-	}
-	//define handler chain, from last to first
-	h := http.Handler(http.HandlerFunc(s.handle))
-	//gzip
-	compression := gzip.DefaultCompression
-	minSize := 0 //IMPORTANT
-	gzipWrap, _ := gziphandler.NewGzipLevelAndMinSize(compression, minSize)
-	h = gzipWrap(h)
-	//auth
+
 	if s.Auth != "" {
 		user := s.Auth
 		pass := ""
@@ -168,81 +147,66 @@ func (s *Server) Run(version string) error {
 			user = s[0]
 			pass = s[1]
 		}
-		h = cookieauth.New().SetUserPass(user, pass).Wrap(h)
+		configs = append(configs, web.WithAuth(user, pass))
 		log.Printf("Enabled HTTP authentication")
 	}
+
 	if s.Log {
-		h = requestlog.Wrap(h)
+		configs = append(configs, web.WithLogging())
 	}
-	log.Printf("Listening at %s://%s", proto, addr)
-	//serve!
-	server := http.Server{
-		//disable http2 due to velox bug
-		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
-		//address
-		Addr: addr,
-		//handler stack
-		Handler: h,
-	}
+
 	if isTLS {
-		return server.ListenAndServeTLS(s.CertPath, s.KeyPath)
+		configs = append(configs, web.WithCertKeyPath(s.CertPath, s.KeyPath))
 	}
-	return server.ListenAndServe()
+	r := http.NewServeMux()
+	r.HandleFunc("GET /sync", s.Sync)
+	r.HandleFunc("POST /api/url", s.GetTorrentByURL)
+	r.HandleFunc("POST /api/torrentfile", s.GetTorrentByFile)
+	r.HandleFunc("POST /api/configure", s.Configure)
+	r.HandleFunc("POST /api/magnet", s.Magnet)
+	r.HandleFunc("POST /api/torrent", s.Torrent)
+	r.HandleFunc("POST /api/file", s.File)
+	r.HandleFunc("/", s.ServeFiles)
+	r.HandleFunc("/js/velox.js", velox.JS)
+	r.HandleFunc("POST /search", Scraper())
+
+	configs = append(configs, web.WithGzip())
+	return web.NewWeb(r, configs...)
 }
+
+var (
+	ErrInvalidPath = errors.New("invalid path")
+)
 
 func (s *Server) reconfigure(c engine.Config) error {
 	dldir, err := filepath.Abs(c.DownloadDirectory)
 	if err != nil {
-		return fmt.Errorf("Invalid path")
+		return ErrInvalidPath
 	}
 	c.DownloadDirectory = dldir
 	if err := s.engine.Configure(c); err != nil {
-		return err
+		return fmt.Errorf("engine configure error: %w", err)
 	}
-	b, _ := json.MarshalIndent(&c, "", "  ")
-	ioutil.WriteFile(s.ConfigPath, b, 0755)
+	b, err := json.MarshalIndent(&c, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config error: %w", err)
+	}
+	if err := os.WriteFile(s.ConfigPath, b, 0755); err != nil {
+		return fmt.Errorf("write config error: %w", err)
+	}
 	s.state.Config = c
 	s.state.Push()
 	return nil
 }
 
-func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
-	//handle realtime client library
-	if r.URL.Path == "/js/velox.js" {
-		velox.JS.ServeHTTP(w, r)
-		return
+func Scraper() http.HandlerFunc {
+	scrape := &scraper.Handler{
+		Log: false, Debug: false,
+		Headers: map[string]string{
+			//we're a trusty browser :)
+			"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36",
+		},
 	}
-	//handle realtime client connections
-	if r.URL.Path == "/sync" {
-		conn, err := velox.Sync(&s.state, w, r)
-		if err != nil {
-			log.Printf("sync failed: %s", err)
-			return
-		}
-		s.state.Users[conn.ID()] = r.RemoteAddr
-		s.state.Push()
-		conn.Wait()
-		delete(s.state.Users, conn.ID())
-		s.state.Push()
-		return
-	}
-	//search
-	if strings.HasPrefix(r.URL.Path, "/search") {
-		s.scraperh.ServeHTTP(w, r)
-		return
-	}
-	//api call
-	if strings.HasPrefix(r.URL.Path, "/api/") {
-		//only pass request in, expect error out
-		if err := s.api(r); err == nil {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
-		} else {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
-		}
-		return
-	}
-	//no match, assume static file
-	s.files.ServeHTTP(w, r)
+	scrape.LoadConfig(SearchConfig())
+	return http.StripPrefix("/search", scrape).ServeHTTP
 }

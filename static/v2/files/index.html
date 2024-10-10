@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Torrent</title>
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <link rel="icon" href="cloud-favicon.png" type="image/x-icon" />
+</head>
+
+<body class="dark:bg-black">
+    <header class="w-[600px] mx-auto space-y-2">
+        <nav class="flex pt-4 pb-2 gap-2">
+            <svg class="size-10 text-4xl font-semibold text-[#4183c4]" xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd"
+                    d="M4.5 9.75a6 6 0 0 1 11.573-2.226 3.75 3.75 0 0 1 4.133 4.303A4.5 4.5 0 0 1 18 20.25H6.75a5.25 5.25 0 0 1-2.23-10.004 6.072 6.072 0 0 1-.02-.496Z"
+                    clip-rule="evenodd" />
+            </svg>
+            <div id="title" class="flex-1 text-4xl font-semibold text-[#4183c4]">
+                <span>[TITLE_PLACEHOLDER]</span>
+            </div>
+            <ul class="flex items-center gap-2">
+                <li class="border border-gray-400 rounded-full">
+                    <svg id="config-toggle" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor" class="size-4 m-1 cursor-pointer">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
+                    </svg>
+                </li>
+                <li class="border border-gray-400 rounded-full">
+                    <svg id="magnet-toggle" class="size-4 m-1 cursor-pointer" xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 448 512"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+                        <path
+                            d="M0 160l0 96C0 379.7 100.3 480 224 480s224-100.3 224-224l0-96-128 0 0 96c0 53-43 96-96 96s-96-43-96-96l0-96L0 160zm0-32l128 0 0-64c0-17.7-14.3-32-32-32L32 32C14.3 32 0 46.3 0 64l0 64zm320 0l128 0 0-64c0-17.7-14.3-32-32-32l-64 0c-17.7 0-32 14.3-32 32l0 64z" />
+                    </svg>
+                </li>
+                <li class="border border-gray-400 rounded-full">
+                    <svg class="size-4 m-1 cursor-pointer stroke-green-400" xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 448 512"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+                        <path
+                            d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288l111.5 0L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7l-111.5 0L349.4 44.6z" />
+                    </svg>
+                </li>
+            </ul>
+        </nav>
+        <div class="border p-4 flex flex-col gap-2 shadow-md rounded" id="config">
+            <span class="font-semibold">Configuration</span>
+            <hr>
+            <label for="auto-start" class="space-x-2">
+                <input type="checkbox" id="auto-start">
+                <span>Auto Start</span>
+            </label>
+            <label for="disable-encryption" class="space-x-2">
+                <input type="checkbox" id="disable-encryption">
+                <span>Disable Encryption</span>
+            </label>
+            <label for="download-directory" class="flex flex-col">
+                <span>Download Directory</span>
+                <input type="text" id="download-directory" class="border rounded font-mono px-3 py-1">
+            </label>
+            <label for="enable-seeding">
+                <input type="checkbox" id="enable-seeding" class="space-x-2">
+                <span>Enable Seeding</span>
+            </label>
+            <label for="enable-upload">
+                <input type="checkbox" id="enable-upload" class="space-x-2">
+                <span>Enable Upload</span>
+            </label>
+            <label for="incoming-port" class="flex flex-col">
+                <span>Incoming Port</span>
+                <input type="text" id="incoming-port" class="border rounded font-mono px-3 py-1">
+            </label>
+
+            <div class="flex justify-center gap-1.5">
+                <button id="save" class="bg-blue-600 text-white rounded px-3 py-1">Save</button>
+                <button id="cancel" class="bg-gray-600 text-white rounded px-3 py-1">Cancel</button>
+            </div>
+        </div>
+        <div class="border p-4 flex flex-col gap-2 shadow-md rounded" id="magnet">
+            <span class="font-semibold">Magnet URI Editor</span>
+            <hr>
+            <label for="name" class="flex flex-col">
+                <span>Name</span>
+                <input type="text" id="name" class="border rounded px-3 py-1" placeholder="Name">
+            </label>
+            <label for="infohash" class="flex flex-col">
+                <span>Info Hash</span>
+                <input type="text" id="infohash" class="border rounded px-3 py-1" placeholder="Info Hash">
+            </label>
+            <label class="flex flex-col space-y-3">
+                <span>Trackers</span>
+                <div id="trackers" class="flex flex-col space-y-3"></div>
+                <template id="tracker-tmpl">
+                    <input type="text" data-tracker class="border rounded px-3 py-1" placeholder="Tracker">
+                </template>
+            </label>
+        </div>
+    </header>
+    <main class="w-[600px] mx-auto flex flex-col gap-2 py-4">
+        <input type="text" id="omni" class="border border-gray-400 rounded px-3 py-1"
+            placeholder="Enter search query, magnet URI, torrent URL or drop a torrent file here">
+        <div id="omnierr" class="flex text-red-600"></div>
+        <div class="flex justify-center gap-2">
+            <button type="button" id="load-magnet" class="bg-blue-600 text-white font-bold text-xs rounded px-4 py-2">
+                Load Magnet
+            </button>
+            <button type="button" id="edit-magnet-toggle"
+                class="bg-gray-300/60 text-gray-600 text-xs font-bold rounded px-4 py-2">Edit</button>
+        </div>
+        <div class="border results overflow-auto max-h-[250px]">
+            <table class="table-auto w-full text-sm">
+                <tr class="odd:bg-white even:bg-gray-50">
+                    <td class="name border-b border-slate-100 p-1.5 text-blue-600 text-end w-full">
+                        <a href="#" id="url">[nameless]</a>
+                    </td>
+                    <td class="size border-b border-slate-100 p-1.5">
+                        <span id="size" class="text-nowrap">0 GB</span>
+                    </td>
+                    <td class="users flex flex-col border-b border-slate-100 p-1.5">
+                        <span id="seeds" class="text-green-600">9911</span>
+                        <span id="peers" class="text-amber-600">5503</span>
+                    </td>
+                    <td class="controls border-b border-slate-100 p-1.5 ">
+                        <button id="download">download</button>
+                    </td>
+                </tr>
+                <tr class="odd:bg-white even:bg-gray-50">
+                    <td class="loadmore border-b border-slate-100 p-1.5 text-end" colspan="10">
+                        <button id="load-more" class="bg-blue-600 text-white font-bold text-xs rounded px-4 py-2">
+                            Load More
+                        </button>
+                    </td>
+                </tr>
+            </table>
+            <template id="search-table-result-tmpl">
+                <tr class="even:bg-gray-50">
+                    <td class="name border-b border-slate-100 p-1.5 text-blue-600 text-end w-full">
+                        <a href="#" id="url">[nameless]</a>
+                    </td>
+                    <td class="size border-b border-slate-100 p-1.5">
+                        <span id="size" class="text-nowrap">0 GB</span>
+                    </td>
+                    <td class="users flex flex-col border-b border-slate-100 p-1.5">
+                        <span id="seeds" class="text-green-600">9911</span>
+                        <span id="peers" class="text-amber-600">5503</span>
+                    </td>
+                    <td class="controls border-b border-slate-100 p-1.5 ">
+                        <button id="download">download</button>
+                    </td>
+                </tr>
+            </template>
+        </div>
+        <div class="flex justify-between">
+            <span class="font-semibold text-xl">Torrents</span>
+            <span class="text-xs text-gray-400"><span id="downloading">0</span> torrents</span>
+        </div>
+        <div class="bg-black/10">
+            <ul id="torrents" class="p-3">
+                <li class="text-center">Add torrents above</li>
+            </ul>
+        </div>
+        <div class="flex justify-between">
+            <span class="font-semibold text-xl">Downloads</span>
+            <span class="text-xs text-gray-400"><span id="free-download-space">0 GB</span> free</span>
+        </div>
+        <div class="border border-black/10 text-sm">
+            <ul id="downloads" class="p-3"></ul>
+            <!-- <li>no downloads</li> -->
+            </ul>
+            <template id="list-item-tmpl">
+                <li class="flex gap-2 items-start">
+                    <span id="icon">
+                        <svg id="icon-closed" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor" class="size-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+                        </svg>
+                        <svg id="icon-opened" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor" class="size-4 hidden">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 13.5H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+                        </svg>
+                    </span>
+                    <div>
+                        <div class="flex gap-1">
+                            <a id="name" href="#" class="text-blue-600 cursor-pointer">ssni025.mp4</a>
+                            <svg id="trash" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke-width="1.5" stroke="currentColor" class="size-4 stroke-red-600 cursor-pointer">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                            </svg>
+                            <svg id="loading" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke-width="1.5" stroke="currentColor"
+                                class="hidden size-4 cursor-pointer animate-spin">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                            <svg id="play" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke-width="1.5" stroke="currentColor" class="hidden size-4 cursor-pointer">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                            </svg>
+                        </div>
+                        <div><span id="size">9.6 GB</span> updated <span id="modified">5 months ago</span></div>
+                        <div>
+                            <audio controls class="hidden">
+                                <source id="audio-preview" src="">
+                            </audio>
+                            <img id="image-preview" src="" class="hidden">
+                            <video controls class="hidden">
+                                <source id="video-preview" src="">
+                            </video>
+                        </div>
+                        <ul id="children" class="hidden"></ul>
+                    </div>
+                </li>
+            </template>
+        </div>
+    </main>
+    <footer class="w-[600px] mx-auto mb-12 flex justify-end text-xs">
+        <div class="flex flex-col items-end italic">
+            <span class="flex gap-1">
+                <span class="flex">github.com/
+                    <a href="https://github.com/gocs" target="_blank" class="text-blue-500">gocs</a>/
+                    <a href="https://github.com/gocs/cloud-torrent" target="_blank"
+                        class="text-blue-500">cloud-torrent</a>
+                </span>
+                <span class="version-str">version <span id="version">0.0.0-src</span></span>
+                <span class="version-str">&mdash;</span>
+                <span class="usercount-str"><span id="usercount">0</span> users connected</span>
+                <span class="usercount-str">&mdash;</span>
+                <span>
+                    <a href="https://golang.org" target="_blank" class="text-blue-500">Go</a> <span id="runtime"></span>
+                </span>
+            </span>
+            <span>
+                <span id="system">
+                    <span class="goroutines-str">
+                        goroutines <span id="goroutines">27</span>,
+                    </span>
+                    <span class="gomem-str">
+                        gomem <span id="gomem">8.3 MB</span>,
+                    </span>
+                    <span>
+                        cpu <span id="cpu">6</span>%,
+                    </span>
+                    <span>
+                        mem <span id="mem">43.9</span>%,
+                    </span>
+                    <span>
+                        disk <span id="disk">32.1</span>%,
+                    </span>
+                </span>
+                <span class="uptime-str">up <span id="uptime">19 minutes ago</span></span>
+            </span>
+        </div>
+    </footer>
+    <script src="js/torelativetime.js"></script>
+    <script src="js/index.js"></script>
+</body>
+
+</html>

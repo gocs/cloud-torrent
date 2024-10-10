@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/gocs/cloud-torrent/server"
+	"github.com/gocs/cloud-torrent/server/v2"
 	"github.com/jpillora/opts"
 )
 
@@ -12,7 +12,7 @@ var version = "0.0.0-src" //set with ldflags
 func main() {
 	s := server.Server{
 		Title:      "Cloud Torrent",
-		Port:       3000,
+		Port:       3001,
 		ConfigPath: "cloud-torrent.json",
 	}
 

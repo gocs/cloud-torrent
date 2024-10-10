@@ -1,8 +1,8 @@
 /* globals app,window */
 
-app.factory("api", function($rootScope, $http, reqerr) {
+app.factory("api", function ($rootScope, $http, reqerr) {
   window.http = $http;
-  var request = function(action, data) {
+  var request = function (action, data) {
     var url = "api/" + action;
     $rootScope.apiing = true;
     return $http({
@@ -12,7 +12,7 @@ app.factory("api", function($rootScope, $http, reqerr) {
       transformRequest: []
     })
       .error(reqerr)
-      .finally(function() {
+      .finally(function () {
         $rootScope.apiing = false;
       });
   };
@@ -25,31 +25,33 @@ app.factory("api", function($rootScope, $http, reqerr) {
     "file",
     "torrentfile"
   ];
-  actions.forEach(function(action) {
+  actions.forEach(function (action) {
     api[action] = request.bind(null, action);
   });
   return api;
 });
 
-app.factory("search", function($rootScope, $http, reqerr) {
+app.factory("search", function ($rootScope, $http, reqerr) {
   return {
-    all: function(provider, query, page) {
+    all: async function (provider, query, page) {
       var params = { query: query };
       if (page !== undefined) params.page = page;
       $rootScope.searching = true;
-      var req = $http.get("search/" + provider, { params: params });
-      req.error(reqerr);
-      req.finally(function() {
+      let res;
+      try { res = await $http.get("search/" + provider, { params: params }); } catch (e) {
+        console.error(`Failed to search ${provider} for ${query}`, e);
+        if (res.error) res.error(reqerr);
+      } finally {
         $rootScope.searching = false;
-      });
-      return req;
+      }
+      return res;
     },
-    one: function(provider, path) {
+    one: function (provider, path) {
       var opts = { params: { item: path } };
       $rootScope.searching = true;
       var req = $http.get("search/" + provider + "/item", opts);
       req.error(reqerr);
-      req.finally(function() {
+      req.finally(function () {
         $rootScope.searching = false;
       });
       return req;
@@ -57,46 +59,46 @@ app.factory("search", function($rootScope, $http, reqerr) {
   };
 });
 
-app.factory("storage", function() {
+app.factory("storage", function () {
   return window.localStorage || {};
 });
 
-app.factory("reqerr", function() {
-  return function(err, status) {
+app.factory("reqerr", function () {
+  return function (err, status) {
     alert(err.error || err);
     console.error("request error '%s' (%s)", err, status);
   };
 });
 
-app.filter("keys", function() {
+app.filter("keys", function () {
   return Object.keys;
 });
 
-app.filter("addspaces", function() {
-  return function(s) {
+app.filter("addspaces", function () {
+  return function (s) {
     return typeof s !== "string"
       ? s
       : s
-          .replace(/([A-Z]+[a-z]*)/g, function(_, word) {
-            return " " + word;
-          })
-          .replace(/^\ /, "");
+        .replace(/([A-Z]+[a-z]*)/g, function (_, word) {
+          return " " + word;
+        })
+        .replace(/^\ /, "");
   };
 });
 
-app.filter("filename", function() {
-  return function(path) {
+app.filter("filename", function () {
+  return function (path) {
     return /\/([^\/]+)$/.test(path) ? RegExp.$1 : path;
   };
 });
 
-app.filter("bytes", function(bytes) {
+app.filter("bytes", function (bytes) {
   return bytes;
 });
 
 //scale a number  and add a metric prefix
-app.factory("bytes", function() {
-  return function(n, d) {
+app.factory("bytes", function () {
+  return function (n, d) {
     // set defaults
     if (typeof n !== "number" || isNaN(n) || n == 0) return "0 B";
     if (!d || typeof d !== "number") d = 1;
@@ -116,8 +118,8 @@ app.factory("bytes", function() {
   };
 });
 
-app.filter("round", function() {
-  return function(n) {
+app.filter("round", function () {
+  return function (n) {
     if (typeof n !== "number") {
       return n;
     }
@@ -125,11 +127,11 @@ app.filter("round", function() {
   };
 });
 
-app.directive("ngEnter", function() {
-  return function(scope, element, attrs) {
-    element.bind("keydown keypress", function(event) {
+app.directive("ngEnter", function () {
+  return function (scope, element, attrs) {
+    element.bind("keydown keypress", function (event) {
       if (event.which === 13) {
-        scope.$apply(function() {
+        scope.$apply(function () {
           scope.$eval(attrs.ngEnter);
         });
         event.preventDefault();
@@ -139,18 +141,18 @@ app.directive("ngEnter", function() {
 });
 
 //TODO remove this hack
-app.directive("jpSrc", function() {
-  return function(scope, element, attrs) {
-    scope.$watch(attrs.jpSrc, function(src) {
+app.directive("jpSrc", function () {
+  return function (scope, element, attrs) {
+    scope.$watch(attrs.jpSrc, function (src) {
       element.attr("src", src);
     });
   };
 });
 
-app.directive("ondropfile", function() {
+app.directive("ondropfile", function () {
   return {
     restrict: "A",
-    link: function(scope, elem, attrs) {
+    link: function (scope, elem, attrs) {
       if (!window.FileReader) {
         return console.info("File API not available");
       }
@@ -167,7 +169,7 @@ app.directive("ondropfile", function() {
       dots.append(msg);
       elem.prepend(cover);
       //bind to events
-      elem.on("dragenter", function(e) {
+      elem.on("dragenter", function (e) {
         cover.addClass("shown");
         e.preventDefault();
         e.dataTransfer.dropEffect = "copy";
@@ -175,14 +177,14 @@ app.directive("ondropfile", function() {
       function remove() {
         cover.removeClass("shown");
       }
-      elem.on("drop", function(event) {
+      elem.on("drop", function (event) {
         event.preventDefault();
         scope.$eval(attrs.ondropfile, {
           $event: event
         });
         remove();
       });
-      elem.on("dragover", function(e) {
+      elem.on("dragover", function (e) {
         //move "drop here"
         var y = e.pageY - elem[0].offsetTop - 60;
         msg.css({ top: y + "px" });
@@ -195,10 +197,10 @@ app.directive("ondropfile", function() {
   };
 });
 
-app.directive("onfileclick", function() {
+app.directive("onfileclick", function () {
   return {
     restrict: "A",
-    link: function(scope, elem, attrs) {
+    link: function (scope, elem, attrs) {
       if (!window.FileReader) {
         console.info("File API not available");
         return;
@@ -212,7 +214,7 @@ app.directive("onfileclick", function() {
         file.attr("accept", attrs.accept);
       }
       file.css("display", "none");
-      file.on("change", function(event) {
+      file.on("change", function (event) {
         event.preventDefault();
         scope.$eval(attrs.onfileclick, {
           $event: event
@@ -221,7 +223,7 @@ app.directive("onfileclick", function() {
       });
       elem.append(file);
       //proxy click from elem to file
-      elem.on("click", function() {
+      elem.on("click", function () {
         file[0].click();
       });
     }

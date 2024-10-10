@@ -1,5 +1,5 @@
 /* globals app,window */
-app.controller("OmniController", function(
+app.controller("OmniController", function (
   $scope,
   $rootScope,
   storage,
@@ -17,14 +17,15 @@ app.controller("OmniController", function(
     trackers: [{ v: "" }]
   };
   $scope.providers = {};
-  $scope.$watch("inputs.provider", function(p) {
+  $scope.$watch("inputs.provider", function (p) {
     if (p) storage.tcProvider = p;
     $scope.parse();
   });
   //if unset, set to first provider
-  $rootScope.$watch("state.SearchProviders", function(searchProviders) {
+  $rootScope.$watch("state.SearchProviders", function (searchProviders) {
     //remove last set
     if (!searchProviders) return;
+    console.log("searchProviders:", searchProviders);
     //filter
     for (var id in searchProviders) {
       if (/\/item$/.test(id)) continue;
@@ -33,11 +34,11 @@ app.controller("OmniController", function(
     $scope.parse();
   });
 
-  var parseTorrent = function() {
+  var parseTorrent = function () {
     $scope.mode.torrent = true;
   };
 
-  var parseMagnet = function(params) {
+  var parseMagnet = function (params) {
     $scope.mode.magnet = true;
     var m = window.queryString.parse(params);
 
@@ -63,12 +64,12 @@ app.controller("OmniController", function(
     $scope.magnet.trackers.push({ v: "" });
   };
 
-  var parseSearch = function() {
+  var parseSearch = function () {
     $scope.mode.search = true;
     while ($scope.results.length) $scope.results.pop();
   };
 
-  $scope.parse = function() {
+  $scope.parse = function () {
     storage.tcOmni = $scope.inputs.omni;
     $scope.omnierr = null;
     //set all 3 to false,
@@ -90,7 +91,7 @@ app.controller("OmniController", function(
   };
   $scope.parse();
 
-  var magnetURI = function(name, infohash, trackers) {
+  var magnetURI = function (name, infohash, trackers) {
     return (
       "magnet:?" +
       "xt=urn:btih:" +
@@ -99,23 +100,23 @@ app.controller("OmniController", function(
       "dn=" +
       (name || "").replace(/\W/g, "").replace(/\s+/g, "+") +
       (trackers || [])
-        .filter(function(t) {
+        .filter(function (t) {
           return !!t.v;
         })
-        .map(function(t) {
+        .map(function (t) {
           return "&tr=" + encodeURIComponent(t.v);
         })
         .join("")
     );
   };
 
-  $scope.parseMagnetString = function() {
+  $scope.parseMagnetString = function () {
     $scope.omnierr = null;
     if (!/^[A-Za-z0-9]+$/.test($scope.magnet.infohash)) {
       $scope.omnierr = "Invalid Info Hash";
       return;
     }
-    for (var i = 0; i < $scope.magnet.trackers.length; )
+    for (var i = 0; i < $scope.magnet.trackers.length;)
       if (!$scope.magnet.trackers[i].v) $scope.magnet.trackers.splice(i, 1);
       else i++;
     $scope.inputs.omni = magnetURI(
@@ -126,7 +127,7 @@ app.controller("OmniController", function(
     $scope.magnet.trackers.push({ v: "" });
   };
 
-  $scope.submitOmni = function() {
+  $scope.submitOmni = function () {
     if ($scope.mode.search) {
       $scope.submitSearch();
     } else {
@@ -134,7 +135,7 @@ app.controller("OmniController", function(
     }
   };
 
-  $scope.submitTorrent = function() {
+  $scope.submitTorrent = function () {
     if ($scope.mode.torrent) {
       api.url($scope.inputs.omni);
     } else if ($scope.mode.magnet) {
@@ -144,7 +145,7 @@ app.controller("OmniController", function(
     }
   };
 
-  $scope.submitSearch = function() {
+  $scope.submitSearch = function () {
     //lookup provider's origin
     var provider = $scope.state.SearchProviders[$scope.inputs.provider];
     if (!provider) return;
@@ -152,7 +153,8 @@ app.controller("OmniController", function(
 
     search
       .all($scope.inputs.provider, $scope.inputs.omni, $scope.page)
-      .success(function(results) {
+      .then(function (r) {
+        let results = r.data;
         if (!results || results.length === 0) {
           $scope.noResults = true;
           $scope.hasMore = false;
@@ -174,7 +176,7 @@ app.controller("OmniController", function(
       });
   };
 
-  $scope.submitSearchItem = function(result) {
+  $scope.submitSearchItem = function (result) {
     //if search item has magnet/torrent, download now!
     if (result.magnet) {
       api.magnet(result.magnet);
@@ -187,7 +189,7 @@ app.controller("OmniController", function(
     if (!result.path) return ($scope.omnierr = "No item URL found");
 
     search.one($scope.inputs.provider, result.path).then(
-      function(resp) {
+      function (resp) {
         var data = resp.data;
         if (!data) return ($scope.omnierr = "No response");
         if (data.torrent) return api.url(data.torrent);
@@ -198,10 +200,10 @@ app.controller("OmniController", function(
           //get urls from the comma separated list
           var trackers = (data.tracker || "")
             .split(",")
-            .filter(function(s) {
+            .filter(function (s) {
               return /^(http|udp):\/\//.test(s);
             })
-            .map(function(v) {
+            .map(function (v) {
               return { v: v };
             });
           magnet = magnetURI(result.name, data.infohash, trackers);
@@ -211,7 +213,7 @@ app.controller("OmniController", function(
         }
         api.magnet(magnet);
       },
-      function(err) {
+      function (err) {
         $scope.omnierr = err;
       }
     );
